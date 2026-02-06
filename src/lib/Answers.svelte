@@ -33,11 +33,16 @@
         if (!trimmed) return;
 
         if (editingAnswerId !== null) {
+            if (selectedQuestionId === null) return;
+            const qId = Number(selectedQuestionId);
             answers = answers.map((a) =>
-                a.id === editingAnswerId ? { ...a, text: trimmed } : a,
+                a.id === editingAnswerId
+                    ? { ...a, text: trimmed, questionId: qId }
+                    : a,
             );
             editingAnswerId = null;
             text = "";
+            selectedQuestionId = null;
             persistAnswers();
             return;
         }
@@ -123,20 +128,32 @@
     {#each answers as answer (answer.id)}
         <div class="card bg-base-300 shadow-md">
             <div class="card-body">
-                <div class="flex justify-between">
-                    <div>
-                        <p class="text- text-gray-600">
-                            Question: {questions.find(
-                                (q) => q.id === answer.questionId,
-                            )?.text ?? "—"}
-                        </p>
-                        <p class="font-medium">{answer.text}</p>
-                        <p class="text-xs text-gray-500">
-                            {new Date(answer.createdAt).toLocaleString()}
-                        </p>
-                    </div>
+                <span class="text-sm text-gray-600 mb-1">
+                    Question:
+                    <p class="font-medium text-base-content">
+                        {questions.find((q) => q.id === answer.questionId)
+                            ?.text ?? "—"}
+                    </p>
+                </span>
 
-                    <div class="flex gap-2 items-start">
+                <span class="text-sm text-gray-600 mb-1">
+                    Answer:
+                    <p class="font-medium text-base-content">
+                        {answer.text}
+                    </p>
+                </span>
+
+                <div class="flex justify-between items-center">
+                    <p class="text-xs text-gray-500 mt-2">
+                        <time
+                            datetime={new Date(answer.createdAt).toISOString()}
+                            >{new Date(answer.createdAt).toLocaleString()}</time
+                        >
+                    </p>
+
+                    <div
+                        class="shrink-0 flex gap-2 items-start md:items-center"
+                    >
                         <button
                             class="btn btn-sm"
                             on:click={() => edit(answer.id)}>Edit</button
