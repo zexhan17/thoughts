@@ -13,6 +13,7 @@
 		{ label: "Answers", value: Tabs.Answers },
 	];
 
+	let { children } = $props();
 	let selectedNavTab = $state(Tabs.Thoughts);
 
 	onMount(() => {
@@ -51,3 +52,5 @@
 		<Questions />
 	{/if}
 </div>
+
+{@render children()}

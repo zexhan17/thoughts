@@ -2,11 +2,20 @@
     import { onMount } from "svelte";
     import type { IAnswer, IQuestion } from "./types";
 
-    let questions: IQuestion[] = [];
-    let answers: IAnswer[] = [];
-    let text: string = "";
-    let editingAnswerId: number | null = null;
-    let selectedQuestionId: number | null = null;
+    let questions: IQuestion[] = $state([]);
+    let answers: IAnswer[] = $state([]);
+    let text: string = $state("");
+    let searchedText: string = $state("");
+    let editingAnswerId: number | null = $state(null);
+    let selectedQuestionId: number | null = $state(null);
+    let filteredAnswers = $derived(filterAnswers(searchedText));
+
+    function filterAnswers(query: string) {
+        if (!query || !query.trim()) return answers;
+
+        const lower = query.toLowerCase();
+        return answers.filter((a) => a.text.toLowerCase().includes(lower));
+    }
 
     onMount(() => {
         const savedQuestions = localStorage.getItem("questions");
@@ -61,8 +70,10 @@
     }
 
     function remove(id: number) {
-        answers = answers.filter((a) => a.id !== id);
-        persistAnswers();
+        if (confirm("Are you sure you want to delete this answer?")) {
+            answers = answers.filter((a) => a.id !== id);
+            persistAnswers();
+        }
     }
 
     function edit(id: number) {
@@ -80,92 +91,97 @@
     }
 </script>
 
-<div class="space-y-2">
-    <label class="block" for="question-select">Select question</label>
-    <select
-        id="question-select"
-        class="select w-full"
-        bind:value={selectedQuestionId}
-        on:change={(e) =>
-            (selectedQuestionId =
-                Number((e.target as HTMLSelectElement).value) || null)}
-    >
-        <option value="" disabled selected={selectedQuestionId === null}
-            >Pick a question</option
+<div class="space-y-5">
+    <div class="space-y-2">
+        <select
+            id="question-select"
+            class="select w-full"
+            bind:value={selectedQuestionId}
+            onchange={(e) =>
+                (selectedQuestionId =
+                    Number((e.target as HTMLSelectElement).value) || null)}
         >
-        {#if questions.length === 0}
-            <option disabled>No questions available</option>
-        {/if}
-        {#each questions as question}
-            <option value={question.id}>{question.text}</option>
-        {/each}
-    </select>
+            <option disabled selected> Pick a question </option>
+            {#if questions.length === 0}
+                <option disabled>No questions available</option>
+            {/if}
+            {#each questions as question}
+                <option value={question.id}>{question.text}</option>
+            {/each}
+        </select>
 
-    <textarea
-        bind:value={text}
-        class="textarea h-24 w-full"
-        placeholder="Answer (press Ctrl/Cmd+Enter to save)"
-        on:keydown={handleKeydown}
-        aria-label="Answer text"
-    ></textarea>
+        <textarea
+            bind:value={text}
+            class="textarea h-24 w-full"
+            placeholder="Answer (press Ctrl/Cmd+Enter to save)"
+            onkeydown={handleKeydown}
+            aria-label="Answer text"
+        ></textarea>
 
-    <div>
-        <button
-            class="btn btn-primary"
-            on:click={save}
-            disabled={!text.trim() || selectedQuestionId === null}
-        >
-            {editingAnswerId !== null ? "Update" : "Save"}
-        </button>
+        <div>
+            <button
+                class="btn btn-primary"
+                onclick={save}
+                disabled={!text.trim() || selectedQuestionId === null}
+            >
+                {editingAnswerId !== null ? "Update" : "Save"}
+            </button>
+        </div>
     </div>
-</div>
 
-<div class="space-y-2 mt-10">
-    {#if answers.length === 0}
-        <p class="text-sm text-gray-500">No answers yet.</p>
-    {/if}
+    <input
+        type="search"
+        placeholder="Search answers..."
+        class="input w-full"
+        bind:value={searchedText}
+    />
 
-    {#each answers as answer (answer.id)}
-        <div class="card bg-base-300 shadow-md">
-            <div class="card-body">
-                <span class="text-sm text-gray-600 mb-1">
-                    Question:
-                    <p class="font-medium text-base-content">
-                        {questions.find((q) => q.id === answer.questionId)
-                            ?.text ?? "—"}
-                    </p>
-                </span>
+    <div class="space-y-2">
+        {#if answers.length === 0}
+            <p class="text-sm text-gray-500">No answers yet.</p>
+        {/if}
 
-                <span class="text-sm text-gray-600 mb-1">
-                    Answer:
-                    <p class="font-medium text-base-content">
-                        {answer.text}
-                    </p>
-                </span>
+        {#each filteredAnswers as answer (answer.id)}
+            <div class="card bg-base-300 shadow-md">
+                <div class="card-body">
+                    <span class="text-sm text-gray-600 mb-1">
+                        Question:
+                        <p class="font-medium text-base-content">
+                            {questions.find((q) => q.id === answer.questionId)
+                                ?.text ?? "—"}
+                        </p>
+                    </span>
 
-                <div class="flex justify-between items-center">
-                    <p class="text-xs text-gray-500 mt-2">
-                        <time
-                            datetime={new Date(answer.createdAt).toISOString()}
-                            >{new Date(answer.createdAt).toLocaleString()}</time
+                    <span class="text-sm text-gray-600 mb-1">
+                        Answer:
+                        <p class="font-medium text-base-content">
+                            {answer.text}
+                        </p>
+                    </span>
+
+                    <div class="flex justify-between items-center">
+                        <p class="text-xs text-gray-500 mt-2">
+                            {new Date(answer.createdAt).toDateString()}
+                            -
+                            {new Date(answer.createdAt).toLocaleTimeString()}
+                        </p>
+
+                        <div
+                            class="shrink-0 flex gap-2 items-start md:items-center"
                         >
-                    </p>
-
-                    <div
-                        class="shrink-0 flex gap-2 items-start md:items-center"
-                    >
-                        <button
-                            class="btn btn-sm"
-                            on:click={() => edit(answer.id)}>Edit</button
-                        >
-                        <button
-                            class="btn btn-sm btn-error"
-                            on:click={() => remove(answer.id)}
-                            aria-label="Delete answer">Delete</button
-                        >
+                            <button
+                                class="btn btn-sm"
+                                onclick={() => edit(answer.id)}>Edit</button
+                            >
+                            <button
+                                class="btn btn-sm btn-error"
+                                onclick={() => remove(answer.id)}
+                                aria-label="Delete answer">Delete</button
+                            >
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    {/each}
+        {/each}
+    </div>
 </div>
