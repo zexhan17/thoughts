@@ -15,6 +15,35 @@
         return thoughts.filter((a) => a.text.toLowerCase().includes(lower));
     }
 
+    type Part = { text: string; match: boolean };
+
+    function highlightParts(text: string, query: string): Part[] {
+        if (!query || !query.trim()) return [{ text, match: false }];
+
+        const escapedQuery = query.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&");
+        const re = new RegExp(escapedQuery, "gi");
+        let lastIndex = 0;
+        const parts: Part[] = [];
+        let match: RegExpExecArray | null;
+
+        while ((match = re.exec(text)) !== null) {
+            if (match.index > lastIndex) {
+                parts.push({
+                    text: text.slice(lastIndex, match.index),
+                    match: false,
+                });
+            }
+            parts.push({ text: match[0], match: true });
+            lastIndex = re.lastIndex;
+        }
+
+        if (lastIndex < text.length) {
+            parts.push({ text: text.slice(lastIndex), match: false });
+        }
+
+        return parts;
+    }
+
     onMount(() => {
         // Load thoughts from local storage or an API
         const savedThoughts = localStorage.getItem("thoughts");
@@ -98,7 +127,18 @@
         {#each filteredThoughts as thought (thought.id)}
             <div class="card bg-base-300 shadow-md">
                 <div class="card-body">
-                    <p>{thought.text}</p>
+                    <p>
+                        {#each highlightParts(thought.text, searchedText) as part, i (i)}
+                            {#if part.match}
+                                <span
+                                    class="bg-yellow-200 px-1 rounded text-black"
+                                    >{part.text}</span
+                                >
+                            {:else}
+                                {part.text}
+                            {/if}
+                        {/each}
+                    </p>
                     <!-- date, edit, delete -->
                     <div class="flex justify-between items-center">
                         <p class="text-xs text-gray-500">

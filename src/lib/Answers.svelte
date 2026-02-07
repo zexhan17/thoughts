@@ -14,7 +14,42 @@
         if (!query || !query.trim()) return answers;
 
         const lower = query.toLowerCase();
-        return answers.filter((a) => a.text.toLowerCase().includes(lower));
+        return answers.filter((a) => {
+            if (a.text.toLowerCase().includes(lower)) return true;
+            const q = questions.find((qq) => qq.id === a.questionId);
+            if (q && q.text && q.text.toLowerCase().includes(lower))
+                return true;
+            return false;
+        });
+    }
+
+    type Part = { text: string; match: boolean };
+
+    function highlightParts(text: string, query: string): Part[] {
+        if (!query || !query.trim()) return [{ text, match: false }];
+
+        const escapedQuery = query.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&");
+        const re = new RegExp(escapedQuery, "gi");
+        let lastIndex = 0;
+        const parts: Part[] = [];
+        let match: RegExpExecArray | null;
+
+        while ((match = re.exec(text)) !== null) {
+            if (match.index > lastIndex) {
+                parts.push({
+                    text: text.slice(lastIndex, match.index),
+                    match: false,
+                });
+            }
+            parts.push({ text: match[0], match: true });
+            lastIndex = re.lastIndex;
+        }
+
+        if (lastIndex < text.length) {
+            parts.push({ text: text.slice(lastIndex), match: false });
+        }
+
+        return parts;
     }
 
     onMount(() => {
@@ -105,7 +140,7 @@
             {#if questions.length === 0}
                 <option disabled>No questions available</option>
             {/if}
-            {#each questions as question}
+            {#each questions as question (question.id)}
                 <option value={question.id}>{question.text}</option>
             {/each}
         </select>
@@ -147,15 +182,32 @@
                     <span class="text-sm text-gray-600 mb-1">
                         Question:
                         <p class="font-medium text-base-content">
-                            {questions.find((q) => q.id === answer.questionId)
-                                ?.text ?? "—"}
+                            {#each highlightParts(questions.find((q) => q.id === answer.questionId)?.text ?? "—", searchedText) as part, i (i)}
+                                {#if part.match}
+                                    <span
+                                        class="bg-yellow-200 px-1 rounded text-black"
+                                        >{part.text}</span
+                                    >
+                                {:else}
+                                    {part.text}
+                                {/if}
+                            {/each}
                         </p>
                     </span>
 
                     <span class="text-sm text-gray-600 mb-1">
                         Answer:
                         <p class="font-medium text-base-content">
-                            {answer.text}
+                            {#each highlightParts(answer.text, searchedText) as part, i (i)}
+                                {#if part.match}
+                                    <span
+                                        class="bg-yellow-200 px-1 rounded text-black"
+                                        >{part.text}</span
+                                    >
+                                {:else}
+                                    {part.text}
+                                {/if}
+                            {/each}
                         </p>
                     </span>
 
