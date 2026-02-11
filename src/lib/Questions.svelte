@@ -88,11 +88,6 @@
             bind:value={text}
             class="textarea h-24 w-full"
             placeholder="Question"
-            onkeydown={(e) => {
-                if (e.key == "Enter") {
-                    handleSave();
-                }
-            }}
         ></textarea>
         <button
             class="btn btn-primary"

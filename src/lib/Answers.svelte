@@ -118,12 +118,6 @@
         editingAnswerId = id;
         selectedQuestionId = a.questionId;
     }
-
-    function handleKeydown(e: KeyboardEvent) {
-        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-            save();
-        }
-    }
 </script>
 
 <div class="space-y-5">
@@ -149,7 +143,6 @@
             bind:value={text}
             class="textarea h-24 w-full"
             placeholder="Answer (press Ctrl/Cmd+Enter to save)"
-            onkeydown={handleKeydown}
             aria-label="Answer text"
         ></textarea>
 
